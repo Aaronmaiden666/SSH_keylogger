@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-project(ssh_keylogger)
+project(keylogger)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(ssh_keylogger main.cpp)
-target_link_libraries(ssh_keylogger stdc++fs)
+add_executable(keylogger main.cpp)
+target_link_libraries(keylogger stdc++fs)
