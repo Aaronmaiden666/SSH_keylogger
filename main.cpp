@@ -51,7 +51,6 @@ std::tuple<std::string, uint16_t, std::string, std::string> split_proc_info(std:
 std::vector<Process> get_proc_list_of_ssh(){
     std::string command("ps -auxw");
     std::array<char, 128> buffer{};
-    //std::string ps_result;
     std::vector<Process> proc_list{};
 
     std::cout << "Opening reading pipe from ps process output" << std::endl;
@@ -70,11 +69,9 @@ std::vector<Process> get_proc_list_of_ssh(){
                                    std::get<1>(splitted_proc_info),
                                    std::get<2>(splitted_proc_info),
                                    std::get<3>(splitted_proc_info)});
-            //ps_result.append(s);
         }
     }
     auto returnCode = pclose(pipe);
-    //std::cout << ps_result << std::endl;
     std::cout << returnCode << std::endl;
     return proc_list;
 }
