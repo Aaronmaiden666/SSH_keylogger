@@ -4,4 +4,4 @@ project(keylogger)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(keylogger main.cpp)
-target_link_libraries(keylogger stdc++fs)
+target_link_libraries(keylogger stdc++fs pthread)
