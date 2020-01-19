@@ -12,3 +12,10 @@ I use C++14/17 for coding but I am still studying. I do it in out of work time a
 #### All progress in dev-branch now. I am working with strace now.
 
 You are welcome for contributing together.
+
+##### Requirements:
+ - CMake
+ - GCC
+ - Boost (regex, filesystem)
+ - Administrative privilege (Ha-Ha)
+
