@@ -19,3 +19,6 @@ You are welcome for contributing together.
  - Boost (regex, filesystem)
  - Administrative privilege (Ha-Ha)
 
+### Features already implemented:
+ - Automatic scannig (every 10 seconds )all SSH-connections (incoming and outgoing) and logging them into /tmp/.keylogger/**.log.
+ - Each new connection will be determined automatically and log too
