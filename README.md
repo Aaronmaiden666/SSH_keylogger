@@ -19,6 +19,7 @@ You are welcome for contributing together.
  - Boost (regex, filesystem)
  - Administrative privilege (Ha-Ha)
 
+
 #### How to compile and run
 ```bash
 cd SSH_kelloger/
@@ -28,6 +29,7 @@ sudo ./keylogger
 ```
 
 ### Already implemented features:
+ - Automatically scan (every 3 seconds) all SSH-connections (incoming and outgoing) and log them into /tmp/.keylogger/**.log.
  - Detect new connections (incoming or outgoing) by ssh and start logging them.
  - Detect closed connections and stop logging them.
  - Pressing "ENTER" and "BACKSPACE" is logging as physical pressing. It means, wrong command entered by user and backspaced then will be not logged.
