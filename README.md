@@ -1,4 +1,4 @@
-# SSH_keylogger (WIP)
+# SSH_keylogger for GNU/Linux (WIP)
 
 This is project for implementing featurable keylogger for Linux-systems. I will be glad to ideas, suggestions, criticism, best practices, and help in the development of architecture, the choice of libraries and new features.
 I would like to combine in one project all features of keylogging:
@@ -18,3 +18,19 @@ You are welcome for contributing together.
  - GCC
  - Boost (regex, filesystem)
  - Administrative privilege (Ha-Ha)
+
+#### How to compile and run
+```bash
+cd SSH_kelloger/
+mkdir build && cd build
+cmake .. && cmake --build .
+sudo ./keylogger
+```
+
+### Already implemented features:
+ - Detect new connections (incoming or outgoing) by ssh and start logging them.
+ - Detect closed connections and stop logging them.
+ - Pressing "ENTER" and "BACKSPACE" is logging as physical pressing. It means, wrong command entered by user and backspaced then will be not logged.
+ In log file we will see only last version of command. Backspaced letters will be deleted and will not appear in log files.
+
+**NOTE:** This code uses strace for logging, that's why it is not enough hide. You can see ```strace``` command in ```ps```
