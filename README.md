@@ -1,6 +1,5 @@
-# SSH_keylogger for GNU/Linux (WIP)
-### What is implemented now:
-Logging via strace is implemented. I do logging by ptrace(instead of strace) to stealth processes of logging in "ps".
+# SSH_keylogger for GNU/Linux
+
 
 ### Summary
 This is project for implementing featurable keylogger for Linux-systems. I will be glad to ideas, suggestions, criticism, best practices, and help in the development of architecture, the choice of libraries and new features.
