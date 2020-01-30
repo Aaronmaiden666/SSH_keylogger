@@ -29,10 +29,10 @@ std::vector<Process> get_proc_list_of_ssh(){
         std::string proc_info{buffer.data()};
         if(proc_info.find("ssh") != std::string::npos){
             std::tuple<std::string, uint16_t, std::string, std::string> splitted_proc_info = parsing_utils::split_proc_info(proc_info);
-            proc_list.emplace_back(Process{std::get<0>(splitted_proc_info),
-                                           std::get<1>(splitted_proc_info),
-                                           std::get<2>(splitted_proc_info),
-                                           std::get<3>(splitted_proc_info)});
+            proc_list.emplace_back(Process{std::get<0>(splitted_proc_info),      //user
+                                           std::get<1>(splitted_proc_info),      //pid
+                                           std::get<2>(splitted_proc_info),      //cmd
+                                           std::get<3>(splitted_proc_info)});    //args
         }
     }
     auto returnCode = pclose(pipe);
