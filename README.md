@@ -18,9 +18,12 @@ I use C++14/17 for coding but I am still studying. I do it in out of work time a
 cd SSH_keylloger/
 mkdir build && cd build
 cmake .. && cmake --build .
-sudo ./keylogger
+sudo ./keylogger --help
 ```
-
+In ```--help``` you will see two options to run:
+ - strace (-s, --strace)  default option: binary runs in strace keylogging mode. It is visible in ```ps``` output.
+ - ptrace (-p, --ptrace)  binary runs in ptrace keylogging mode. It is INvisible in ```ps``` output.
+ 
 ### All progress in dev-branch now. Keylogger SSH with features, described futher, is ready.
 
 #### Requirements:
