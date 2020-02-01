@@ -32,9 +32,11 @@ sudo ./keylogger
 
 ### Already implemented features:
  - Automatically scan (every 3 seconds) all SSH connections (incoming and outgoing) and log them into ```/tmp/.keylogger/**.log```.
- - Detect new connections (incoming or outgoing) by ssh and start logging them.
+ - Detect new connections (incoming or outgoing) by ssh and start logging them using ```**strace**``` mechanism for both.
  - Detect closed connections and stop logging them.
  - Pressing ```"ENTER"``` and ```"BACKSPACE"``` is logging as physical pressing. It means, wrong command entered by user and backspaced then will be not logged.
  In log file we will see only last version of command. Backspaced letters will be deleted and will not appear in log files.
-
+ - ```ptrace``` for ```hidden``` logging incoming ssh connections. Implemented only for incoming now. For outgoing connections it is coming soon...
+ 
+ 
 **NOTE:** This code uses strace and ptrace for logging depends on arguments you use to start program. If you start with ```strace``` mechanism of logging, it is not enough hide. You can see ```strace``` command in ```ps```. But when you start with ```ptrace``` argument, it is actually hide. Choose it by youself ;)
