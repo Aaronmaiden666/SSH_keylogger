@@ -15,7 +15,7 @@ I use C++14/17 for coding but I am still studying. I do it in out of work time a
 ### How to compile and run
 
 ```bash
-cd SSH_kelloger/
+cd SSH_keylloger/
 mkdir build && cd build
 cmake .. && cmake --build .
 sudo ./keylogger
@@ -37,4 +37,4 @@ sudo ./keylogger
  - Pressing ```"ENTER"``` and ```"BACKSPACE"``` is logging as physical pressing. It means, wrong command entered by user and backspaced then will be not logged.
  In log file we will see only last version of command. Backspaced letters will be deleted and will not appear in log files.
 
-**NOTE:** This code uses strace for logging, that's why it is not enough hide. You can see ```strace``` command in ```ps```
+**NOTE:** This code uses strace and ptrace for logging depends on arguments you use to start program. If you start with ```strace``` mechanism of logging, it is not enough hide. You can see ```strace``` command in ```ps```. But when you start with ```ptrace``` argument, it is actually hide. Choose it by youself ;)
