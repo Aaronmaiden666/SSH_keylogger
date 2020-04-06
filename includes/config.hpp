@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 
+//#define DEBUG 0
 
 void DEBUG_STDOUT(const std::string& msg) {
     if (DEBUG) std::cout << msg << std::endl;
