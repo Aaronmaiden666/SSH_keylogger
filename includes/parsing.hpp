@@ -8,7 +8,7 @@ namespace parsing_utils {
         std::string item{};
         while (std::getline(ss, item, delim)) {
             if (item.length() > 0) {
-                elems.push_back(item);
+                elems.emplace_back(item);
             }
         }
         return elems;
@@ -16,12 +16,8 @@ namespace parsing_utils {
 
     std::tuple<std::string, uint16_t, std::string, std::string> split_proc_info(const std::string& proc_info){      // IS_TESTED
         char delim = ' ';
-        std::vector<std::string> elems = split_string(proc_info, delim);
-        std::tuple<std::string, uint16_t, std::string, std::string> splitted_proc_info = std::make_tuple(elems[0],
-                                                                                                         std::stoi(elems[1]),
-                                                                                                         elems[10],
-                                                                                                         elems[11]);
-        return splitted_proc_info;
+        auto elems = split_string(proc_info, delim);
+        return std::make_tuple(elems[0], std::stoi(elems[1]), elems[10], elems[11]);
     }
 
     std::string parse_strace_line(const std::string &output, boost::regex &xRegEx){     // IS_TESTED
